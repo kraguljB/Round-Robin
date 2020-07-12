@@ -7,6 +7,7 @@ import time
 import threading
 from threading import Event, Lock
 import string
+#from random import randint
 from random import *
 
 ServerSocket = socket.socket()
@@ -16,6 +17,8 @@ ThreadCount = 0
 
 #clients = []
 #clients_lock = threading.Lock()
+
+random_flag = True
 
 flag = 1
 endMessage = False
@@ -68,8 +71,9 @@ class Broker():
     def threaded_client(self):
         global emptyQueues
         global endMessage
+        global random_flag
         #connection.send(str.encode('Welcome to the Server\n'))
-        print('Server {}'.format(self))
+        print("\nServer {}".format(self))
         #global clients
         #print("List size {}".format(len(clients)))
         #for c in clients:
@@ -89,15 +93,38 @@ class Broker():
             emptyQueues += 1
             return
         
-        print("Duzina liste {}".format(len(self.clientList)))
-        for c in self.clientList:
-            #data = input("Enter message for client: ")
-            mutex.acquire()
-            data = self.q.get()
-            mutex.release()
-            print("{} sending {}".format(self, data))
-            c.sendall(str.encode(data))
-            time.sleep(.1)
+        print("Duzina liste (broj klijenata) {}".format(len(self.clientList)))
+        if(False == random_flag):
+            for c in self.clientList:
+                #data = input("Enter message for client: ")
+                mutex.acquire()
+                data = self.q.get()
+                mutex.release()
+                print("{} sending ---> {}".format(self, data))
+                c.sendall(str.encode(data))
+                time.sleep(.1)
+        else:
+            #choosing random broker
+            random_broker = randint(0, 2)
+            if(1 == random_broker):
+                length = len(self.clientList)
+                #choosing random client
+                random_client = randint(0, length - 1)
+                iter = 0
+
+                for c in self.clientList:
+                    #data = input("Enter message for client: ")
+                    if iter == random_client:
+                        print("********** SALJEM PORUKU **********")
+                        mutex.acquire()
+                        data = self.q.get()
+                        mutex.release()
+                        print("{} sending ---> {}".format(self, data))
+                        c.sendall(str.encode(data))
+                        time.sleep(.1)
+                        break
+                    iter += 1
+
         #connection.sendall(str.encode(data))
         #    self.messageCount += 1
             
@@ -304,12 +331,16 @@ print()
 print("Flag set")
 print("DUZINA GRAFA {}".format(len(graph.nodes)))
 flag = 2 
+print("Broker 1")
 for c in graph.nodes[0].clientList:
     print("Node 0 {}".format(c))
-    
+print("Broker 2")
 for c in graph.nodes[1].clientList:
     print("Node 1 {}".format(c))
-    
+print("Broker 3")
+for c in graph.nodes[2].clientList:
+    print("Node 2 {}".format(c))
+
 P1 = Publisher("Publisher")
     
 t1 = threading.Thread(target=P1.generate_string, args=[graph.nodes[0]])
@@ -330,4 +361,4 @@ print("Closing connections")
 #graph.BFS(graph.nodes[0]) 
 ServerSocket.close()
 #print("Exit program")
-exit()
+sys.exit()

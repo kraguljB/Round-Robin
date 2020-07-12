@@ -46,6 +46,7 @@ class Client:
             print("Client {}".format(self))
             check = Response.decode('utf-8')
             print(Response.decode('utf-8'))
+            print("")
             if check == "end":
                 print("CLOSE SOCKET")
                 self.ClientSocket.close()
