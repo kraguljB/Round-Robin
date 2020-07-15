@@ -18,13 +18,17 @@ ThreadCount = 0
 #clients = []
 #clients_lock = threading.Lock()
 
-random_flag = True
+random_flag = False
+sticky_flag = True
 
 flag = 1
 endMessage = False
 emptyQueues = 0
 event = Event()
 mutex = Lock()
+
+#fix [Errno 98]
+ServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
     ServerSocket.bind((host, port))
@@ -73,12 +77,15 @@ class Broker():
         global emptyQueues
         global endMessage
         global random_flag
+        global sticky_flag
         #connection.send(str.encode('Welcome to the Server\n'))
         print("Broker {} salje poruku".format(self))
         print("VELICINA REDA U {} JE {}".format(self, self.q.qsize()))
         
         print("Duzina liste (broj klijenata) {}".format(len(self.clientList)))
-        if(False == random_flag):
+        #roundRobin
+        if(False == random_flag and False == sticky_flag):
+            print("\n ROUND ROBIN")
             for c in self.clientList:
                 #data = input("Enter message for client: ")
                 mutex.acquire()
@@ -89,7 +96,49 @@ class Broker():
                 time.sleep(.1)
                 if self.q.empty() == True:
                     break
-        else:
+        #sticky
+        elif(False == random_flag and True == sticky_flag):
+            print("\n STICKY")
+            #this number represents how many times certain client will be targeted
+            #repeat_client = 0
+            """
+            for c in self.clientList:
+                repeat_client = randint(1, 4)
+                mutex.acquire()
+                data = self.q.get()
+                mutex.release()
+                for iter in range(0, repeat_client):
+                    print("{} sending ---> {}".format(self, data))
+                    c.sendall(str.encode(data))
+                    time.sleep(.1)
+                    """
+            #choosing random broker (sticky is in fact random algorith which targets same client multiple times)
+            random_broker = randint(0, 2)
+            if(1 == random_broker):
+                length = len(self.clientList)
+                #choosing random client
+                random_client = randint(0, length - 1)
+                iter = 0
+                #this number represents how many times certain client will be targeted
+                repeat_client = 0
+
+                for c in self.clientList:
+                    #data = input("Enter message for client: ")
+                    if iter == random_client:
+                        repeat_client = randint(1, 10)
+                        print("********** SALJEM PORUKU **********")
+                        mutex.acquire()
+                        data = self.q.get()
+                        mutex.release()
+                        for same_client_iter in range(0, repeat_client):
+                            print("{} sending ---> {}".format(self, data))
+                            c.sendall(str.encode(data))
+                            time.sleep(.1)
+                        break
+                    iter += 1
+        #random
+        elif(True == random_flag and False == sticky_flag):
+            print("\n RANDOM")
             #choosing random broker
             random_broker = randint(0, 2)
             if(1 == random_broker):
@@ -110,6 +159,9 @@ class Broker():
                         time.sleep(.1)
                         break
                     iter += 1
+        else:
+            print("\n\n SOMETHING WENT WRONG! PLEASE CHECK YOUR GLOBAL ALGORITHM FLAGS! \n\n")
+            sys.exit()
 
         #connection.sendall(str.encode(data))
         #    self.messageCount += 1
