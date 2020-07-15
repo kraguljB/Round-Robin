@@ -101,7 +101,7 @@ class Broker():
         print("Duzina liste (broj klijenata) {}".format(len(self.clientList)))
         #roundRobin
         if(False == random_flag and False == sticky_flag):
-            print("\n RAOUND ROBIN")
+            print("\n ROUND ROBIN")
             for c in self.clientList:
                 #data = input("Enter message for client: ")
                 mutex.acquire()
@@ -340,7 +340,6 @@ def Get_Predefined_Dag():
     time.sleep(.2)
     t3.start()
 
-    print("AAAAAAAAAAAA")
     # Append adjacencies
     for i in range(len(adjacency)):
         G.edges.append(adjacency[i])
