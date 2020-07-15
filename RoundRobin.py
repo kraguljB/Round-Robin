@@ -18,13 +18,17 @@ ThreadCount = 0
 #clients = []
 #clients_lock = threading.Lock()
 
-random_flag = True
+random_flag = False
+sticky_flag = True
 
 flag = 1
 endMessage = False
 emptyQueues = 0
 event = Event()
 mutex = Lock()
+
+#fix [Errno 98]
+ServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
     ServerSocket.bind((host, port))
@@ -72,6 +76,7 @@ class Broker():
         global emptyQueues
         global endMessage
         global random_flag
+        global sticky_flag
         #connection.send(str.encode('Welcome to the Server\n'))
         print("\nServer {}".format(self))
         #global clients
@@ -94,7 +99,9 @@ class Broker():
             return
         
         print("Duzina liste (broj klijenata) {}".format(len(self.clientList)))
-        if(False == random_flag):
+        #roundRobin
+        if(False == random_flag and False == sticky_flag):
+            print("\n RAOUND ROBIN")
             for c in self.clientList:
                 #data = input("Enter message for client: ")
                 mutex.acquire()
@@ -103,7 +110,23 @@ class Broker():
                 print("{} sending ---> {}".format(self, data))
                 c.sendall(str.encode(data))
                 time.sleep(.1)
-        else:
+        #sticky
+        elif(False == random_flag and True == sticky_flag):
+            print("\n STICKY")
+            #this number represents how many times certain client will be targeted
+            repeat_client = 0
+            for c in self.clientList:
+                repeat_client = randint(1, 4)
+                mutex.acquire()
+                data = self.q.get()
+                mutex.release()
+                for iter in range(0, repeat_client):
+                    print("{} sending ---> {}".format(self, data))
+                    c.sendall(str.encode(data))
+                    time.sleep(.1)
+        #random
+        elif(True == random_flag and False == sticky_flag):
+            print("\n RANDOM")
             #choosing random broker
             random_broker = randint(0, 2)
             if(1 == random_broker):
@@ -124,6 +147,8 @@ class Broker():
                         time.sleep(.1)
                         break
                     iter += 1
+        else:
+            print("\n\n SOMETHING WENT WRONG! PLEASE CHECK YOUR GLOBAL ALGORITHM FLAGS! \n\n")
 
         #connection.sendall(str.encode(data))
         #    self.messageCount += 1
@@ -360,5 +385,5 @@ flag = 3
 print("Closing connections")
 #graph.BFS(graph.nodes[0]) 
 ServerSocket.close()
-#print("Exit program")
+print("\nBye...\n")
 sys.exit()
