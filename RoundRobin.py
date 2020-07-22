@@ -7,6 +7,7 @@ import time
 import threading
 from threading import Event, Lock
 import string
+#from random import randint
 from random import *
 
 ServerSocket = socket.socket()
@@ -17,11 +18,17 @@ ThreadCount = 0
 #clients = []
 #clients_lock = threading.Lock()
 
+random_flag = False
+sticky_flag = True
+
 flag = 1
 endMessage = False
 emptyQueues = 0
 event = Event()
 mutex = Lock()
+
+#fix [Errno 98]
+ServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
     ServerSocket.bind((host, port))
@@ -68,8 +75,10 @@ class Broker():
     def threaded_client(self):
         global emptyQueues
         global endMessage
+        global random_flag
+        global sticky_flag
         #connection.send(str.encode('Welcome to the Server\n'))
-        print('Server {}'.format(self))
+        print("\nServer {}".format(self))
         #global clients
         #print("List size {}".format(len(clients)))
         #for c in clients:
@@ -89,15 +98,58 @@ class Broker():
             emptyQueues += 1
             return
         
-        print("Duzina liste {}".format(len(self.clientList)))
-        for c in self.clientList:
-            #data = input("Enter message for client: ")
-            mutex.acquire()
-            data = self.q.get()
-            mutex.release()
-            print("{} sending {}".format(self, data))
-            c.sendall(str.encode(data))
-            time.sleep(.1)
+        print("Duzina liste (broj klijenata) {}".format(len(self.clientList)))
+        #roundRobin
+        if(False == random_flag and False == sticky_flag):
+            print("\n ROUND ROBIN")
+            for c in self.clientList:
+                #data = input("Enter message for client: ")
+                mutex.acquire()
+                data = self.q.get()
+                mutex.release()
+                print("{} sending ---> {}".format(self, data))
+                c.sendall(str.encode(data))
+                time.sleep(.1)
+        #sticky
+        elif(False == random_flag and True == sticky_flag):
+            print("\n STICKY")
+            #this number represents how many times certain client will be targeted
+            repeat_client = 0
+            for c in self.clientList:
+                repeat_client = randint(1, 4)
+                mutex.acquire()
+                data = self.q.get()
+                mutex.release()
+                for iter in range(0, repeat_client):
+                    print("{} sending ---> {}".format(self, data))
+                    c.sendall(str.encode(data))
+                    time.sleep(.1)
+        #random
+        elif(True == random_flag and False == sticky_flag):
+            print("\n RANDOM")
+            #choosing random broker
+            random_broker = randint(0, 2)
+            if(1 == random_broker):
+                length = len(self.clientList)
+                #choosing random client
+                random_client = randint(0, length - 1)
+                iter = 0
+
+                for c in self.clientList:
+                    #data = input("Enter message for client: ")
+                    if iter == random_client:
+                        print("********** SALJEM PORUKU **********")
+                        mutex.acquire()
+                        data = self.q.get()
+                        mutex.release()
+                        print("{} sending ---> {}".format(self, data))
+                        c.sendall(str.encode(data))
+                        time.sleep(.1)
+                        break
+                    iter += 1
+        else:
+            print("\n\n SOMETHING WENT WRONG! PLEASE CHECK YOUR GLOBAL ALGORITHM FLAGS! \n\n")
+
         #connection.sendall(str.encode(data))
         #    self.messageCount += 1
             
@@ -288,7 +340,6 @@ def Get_Predefined_Dag():
     time.sleep(.2)
     t3.start()
 
-    print("AAAAAAAAAAAA")
     # Append adjacencies
     for i in range(len(adjacency)):
         G.edges.append(adjacency[i])
@@ -304,12 +355,16 @@ print()
 print("Flag set")
 print("DUZINA GRAFA {}".format(len(graph.nodes)))
 flag = 2 
+print("Broker 1")
 for c in graph.nodes[0].clientList:
     print("Node 0 {}".format(c))
-    
+print("Broker 2")
 for c in graph.nodes[1].clientList:
     print("Node 1 {}".format(c))
-    
+print("Broker 3")
+for c in graph.nodes[2].clientList:
+    print("Node 2 {}".format(c))
+
 P1 = Publisher("Publisher")
     
 t1 = threading.Thread(target=P1.generate_string, args=[graph.nodes[0]])
@@ -329,5 +384,5 @@ flag = 3
 print("Closing connections")
 #graph.BFS(graph.nodes[0]) 
 ServerSocket.close()
-#print("Exit program")
-exit()
+print("\nBye...\n")
+sys.exit()
