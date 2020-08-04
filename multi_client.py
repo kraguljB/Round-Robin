@@ -97,4 +97,3 @@ t5 = threading.Thread(target=C5.recv_messages, args=[])
 for i in range(numberOfClients):
     threads[i].start()
     time.sleep(.1)
-

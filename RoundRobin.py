@@ -7,6 +7,7 @@ import time
 import threading
 from threading import Event, Lock
 import string
+#from random import randint
 from random import *
 import psutil
 
@@ -19,12 +20,18 @@ totalMessagesSentCount = 0
 #clients = []
 #clients_lock = threading.Lock()
 
+random_flag = False
+sticky_flag = True
+
 flag = 1
 available = True
 endMessage = False
 emptyQueues = 0
 event = Event()
 mutex = Lock()
+
+#fix [Errno 98]
+ServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
     ServerSocket.bind((host, port))
@@ -111,8 +118,7 @@ class Broker():
             print("{} broker has empty queue".format(self))
             emptyQueues += 1
             return
-        
-        
+
         print("Duzina liste {}".format(len(self.clientList)))
         for c in self.clientList:
             #data = input("Enter message for client: ")
@@ -373,7 +379,7 @@ flag = 2
 """
 for c in graph.nodes[0].clientList:
     print("Node 0 {}".format(c))
-    
+print("Broker 2")
 for c in graph.nodes[1].clientList:
     print("Node 1 {}".format(c))
 """
@@ -388,7 +394,7 @@ while True:
         break
 
 print("CLOSING CONNECTION")
-CPU_Pct=str(round(float(os.popen('''grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage }' ''').readline()),2))
+CPU_Pct = str(round(float(os.popen('''grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage }' ''').readline()),2))
 #print results
 print("CPU Usage = " + CPU_Pct)
 print("Elapsed time: {}".format(toc - tic))
@@ -421,5 +427,5 @@ graph.BFS(graph.nodes[0])
 print("Closing connections")
 #graph.BFS(graph.nodes[0]) 
 ServerSocket.close()
-#print("Exit program")
+print("\n\nExit program\n")
 sys.exit()
