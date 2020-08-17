@@ -20,7 +20,7 @@ totalMessagesSentCount = 0
 #clients = []
 #clients_lock = threading.Lock()
 
-random_flag = True
+random_flag = False
 sticky_flag = False
 
 flag = 1
