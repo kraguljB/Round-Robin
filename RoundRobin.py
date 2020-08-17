@@ -20,8 +20,8 @@ totalMessagesSentCount = 0
 #clients = []
 #clients_lock = threading.Lock()
 
-random_flag = False
-sticky_flag = True
+random_flag = True
+sticky_flag = False
 
 flag = 1
 available = True
@@ -108,6 +108,8 @@ class Broker():
         global emptyQueues
         global endMessage
         global totalMessagesSentCount
+        global random_flag
+        global sticky_flag
         #connection.send(str.encode('Welcome to the Server\n'))
         print("Broker {} salje poruku".format(self))
         print("VELICINA REDA U {} JE {}".format(self, self.q.qsize()))
@@ -120,25 +122,126 @@ class Broker():
             return
 
         print("Duzina liste {}".format(len(self.clientList)))
-        for c in self.clientList:
-            #data = input("Enter message for client: ")
-            print("GARISA")
-            if self.q.empty() == True and self.q.empty() == True:
+
+        #roundRobin
+        if(False == random_flag and False == sticky_flag):
+            print("\n ROUND ROBIN")
+
+            for c in self.clientList:
+                #data = input("Enter message for client: ")
+                #print("GARISA")
+                print("********** SALJEM PORUKU - RR **********")
+                if self.q.empty() == True and self.q.empty() == True:
+                    event.set()
+                    return
+                mutex.acquire()
+                data = self.q.get()
+                mutex.release()
+                print("{} sending {}".format(self, data))
+                c.sendall(str.encode(data))
+                totalMessagesSentCount += 1
+                if totalMessagesSentCount == 100:
+                    event.set()
+                    return
+                time.sleep(.1)
+            event.set()
+        #sticky
+        elif(False == random_flag and True == sticky_flag):
+            print("\n STICKY")
+            #this number represents how many times certain client will be targeted
+            #repeat_client = 0
+            """
+            for c in self.clientList:
+                repeat_client = randint(1, 4)
+                mutex.acquire()
+                data = self.q.get()
+                mutex.release()
+                for iter in range(0, repeat_client):
+                    print("{} sending ---> {}".format(self, data))
+                    c.sendall(str.encode(data))
+                    time.sleep(.1)
+                    """
+            #choosing random broker (sticky is in fact random algorith which targets same client multiple times)
+            random_broker = randint(0, 2)
+            if(1 == random_broker):
+                length = len(self.clientList)
+                #choosing random client
+                random_client = randint(0, length - 1)
+                iter = 0
+                #this number represents how many times certain client will be targeted
+                #repeat_client = 0
+
+                for c in self.clientList:
+                    #data = input("Enter message for client: ")
+                    if iter == random_client:
+                        #repeat_client = randint(1, 10)
+                        print("********** SALJEM PORUKU - sticky **********")
+                        mutex.acquire()
+                        data = self.q.get()
+                        mutex.release()
+                        #for same_client_iter in range(0, repeat_client):
+                        while(True):
+                            print("{} sending ---> {}".format(self, data))
+                            c.sendall(str.encode(data))
+                            time.sleep(.1)
+                        break
+                    iter += 1
+
+                for c in self.clientList:
+                    #data = input("Enter message for client: ")
+                    if iter == random_client:
+                        #print("GARISA")
+                        if self.q.empty() == True and self.q.empty() == True:
+                            event.set()
+                            return
+                        repeat_client = randint(1, 10)
+                        print("********** SALJEM PORUKU **********")
+                        mutex.acquire()
+                        data = self.q.get()
+                        mutex.release()
+                        for same_client_iter in range(0, repeat_client):
+                            print("{} sending {}".format(self, data))
+                            c.sendall(str.encode(data))
+                            totalMessagesSentCount += 1
+                            if totalMessagesSentCount == 100:
+                                event.set()
+                                return
+                            time.sleep(.1)
+                        break
                 event.set()
-                return
-            mutex.acquire()
-            data = self.q.get()
-            mutex.release()
-            print("{} sending {}".format(self, data))
-            c.sendall(str.encode(data))
-            totalMessagesSentCount += 1
-            if totalMessagesSentCount == 100:
+        #random
+        elif(True == random_flag and False == sticky_flag):
+            print("\n RANDOM")
+            #choosing random broker
+            random_broker = randint(0, 2)
+            if(1 == random_broker):
+                length = len(self.clientList)
+                #choosing random client
+                random_client = randint(0, length - 1)
+                iter = 0
+
+                for c in self.clientList:
+                    #data = input("Enter message for client: ")
+                    #print("GARISA")
+                    print("********** SALJEM PORUKU - random **********")
+                    if self.q.empty() == True and self.q.empty() == True:
+                        event.set()
+                        return
+                    mutex.acquire()
+                    data = self.q.get()
+                    mutex.release()
+                    print("{} sending {}".format(self, data))
+                    c.sendall(str.encode(data))
+                    totalMessagesSentCount += 1
+                    if totalMessagesSentCount == 100:
+                        event.set()
+                        return
+                    time.sleep(.1)
                 event.set()
-                return
-            time.sleep(.1)
-        event.set()
-        #event.set()
-        
+        else:
+            print("\n\n SOMETHING WENT WRONG! PLEASE CHECK YOUR GLOBAL ALGORITHM FLAGS! \n\n")
+            sys.exit()
+ 
     def start_message_exchange(self):
         #send message from current broker to its neighbour broker
         print("POKRECEM START MESSAGE EXCHANGE ZA {}".format(self))
